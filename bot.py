@@ -1,25 +1,43 @@
 import os
 import logging
+from threading import Thread
+from flask import Flask
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
 import yt_dlp
 
+# Logging সেটআপ
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
-# এনভায়রনমেন্ট থেকে টোকেন নেওয়া হবে
-BOT_TOKEN = os.getenv("BOT_TOKEN")
+# Render Keep-Alive Web Server
+flask_app = Flask('')
 
+@flask_app.route('/')
+def home():
+    return "Bot is active and running!"
+
+def run_flask():
+    port = int(os.environ.get("PORT", 8080))
+    flask_app.run(host='0.0.0.0', port=port)
+
+def keep_alive():
+    t = Thread(target=run_flask)
+    t.daemon = True
+    t.start()
+
+# Telegram Bot Handler
+BOT_TOKEN = os.getenv("BOT_TOKEN")
 user_urls = {}
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("স্বাগতম! 👋\n\nযেকোনো ভিডিওর লিঙ্ক পাঠান। আমি কোয়ালিটি বেছে নেওয়ার অপশন দেব।")
+    await update.message.reply_text("স্বাগতম! 👋\n\nযেকোনো ভিডিওর লিঙ্ক পাঠান। আমি রেজোলিউশন বা কোয়ালিটি বেছে নেওয়ার অপশন দেব।")
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     url = update.message.text
     user_id = update.message.from_user.id
     
     if "http://" not in url and "https://" not in url:
-        await update.message.reply_text("অনুগ্রহ করে একটি সঠিক লিঙ্ক পাঠান।")
+        await update.message.reply_text("অনুগ্রহ করে একটি সঠিক ভিডিও লিঙ্ক পাঠান।")
         return
 
     user_urls[user_id] = url
@@ -40,7 +58,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
     url = user_urls.get(user_id)
 
     if not url:
-        await query.edit_message_text("কোনো লিঙ্ক পাওয়া যায়নি। আবার পাঠান।")
+        await query.edit_message_text("কোনো লিঙ্ক পাওয়া যায়নি। আবার পাঠাও।")
         return
 
     await query.edit_message_text(f"⏳ {quality}p ডাউনলোড প্রসেস করা হচ্ছে...")
@@ -80,6 +98,10 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
             os.remove(filename)
 
 def main():
+    if not BOT_TOKEN:
+        print("BOT_TOKEN পাওয়া যায়নি!")
+        return
+
     app = Application.builder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
@@ -89,4 +111,5 @@ def main():
     app.run_polling()
 
 if __name__ == '__main__':
+    keep_alive()
     main()
