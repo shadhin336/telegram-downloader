@@ -6,10 +6,8 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
 import yt_dlp
 
-# Logging সেটআপ
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
-# Render Keep-Alive Web Server
 flask_app = Flask('')
 
 @flask_app.route('/')
@@ -25,19 +23,18 @@ def keep_alive():
     t.daemon = True
     t.start()
 
-# Telegram Bot Handler
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 user_urls = {}
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("স্বাগতম! 👋\n\nযেকোনো ভিডিওর লিঙ্ক পাঠান। আমি রেজোলিউশন বা কোয়ালিটি বেছে নেওয়ার অপশন দেব।")
+    await update.message.reply_text("স্বাগতম! 👋\n\nযেকোনো ভিডিওর লিঙ্ক পাঠান। আমি কোয়ালিটি বেছে নেওয়ার অপশন দেব।")
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     url = update.message.text
     user_id = update.message.from_user.id
     
     if "http://" not in url and "https://" not in url:
-        await update.message.reply_text("অনুগ্রহ করে একটি সঠিক ভিডিও লিঙ্ক পাঠান।")
+        await update.message.reply_text("অনুগ্রহ করে একটি সঠিক লিঙ্ক পাঠান।")
         return
 
     user_urls[user_id] = url
@@ -61,7 +58,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text("কোনো লিঙ্ক পাওয়া যায়নি। আবার পাঠান।")
         return
 
-    await query.edit_message_text(f"⏳ {quality}p ডাউনলোড প্রসেস করা হচ্ছে...")
+    await query.edit_message_text(f"⏳ {quality}p প্রসেস করা হচ্ছে, অপেক্ষা করুন...")
 
     if quality == "best":
         format_spec = "bestvideo/best"
@@ -70,16 +67,17 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     filename = f"video_{user_id}.mp4"
 
-    # YouTube Bot Bypass Client Options
+    # YouTube Bot Bypass setup
     ydl_opts = {
         'format': format_spec,
         'outtmpl': filename,
         'quiet': True,
         'nocheckcertificate': True,
-        'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
         'extractor_args': {
             'youtube': {
-                'player_client': ['android', 'web']
+                'player_client': ['ios', 'mweb', 'android'],
+                'skip': ['webpage', 'configs']
             }
         }
     }
@@ -88,7 +86,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             ydl.download([url])
 
-        await query.edit_message_text("📤 ভিডিও টেলিগ্রামে আপলোড হচ্ছে...")
+        await query.edit_message_text("📤 আপলোড হচ্ছে...")
 
         with open(filename, 'rb') as video_file:
             await context.bot.send_video(
