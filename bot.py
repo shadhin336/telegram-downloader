@@ -58,7 +58,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
     url = user_urls.get(user_id)
 
     if not url:
-        await query.edit_message_text("কোনো লিঙ্ক পাওয়া যায়নি। আবার পাঠাও।")
+        await query.edit_message_text("কোনো লিঙ্ক পাওয়া যায়নি। আবার পাঠান।")
         return
 
     await query.edit_message_text(f"⏳ {quality}p ডাউনলোড প্রসেস করা হচ্ছে...")
@@ -70,10 +70,18 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     filename = f"video_{user_id}.mp4"
 
+    # YouTube Bot Bypass Client Options
     ydl_opts = {
         'format': format_spec,
         'outtmpl': filename,
-        'quiet': True
+        'quiet': True,
+        'nocheckcertificate': True,
+        'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'extractor_args': {
+            'youtube': {
+                'player_client': ['android', 'web']
+            }
+        }
     }
 
     try:
